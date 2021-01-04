@@ -87,6 +87,6 @@ interface AppConfig<S = any> {
   middleware?: Array<Middleware<S>>;
 }
 
-export type App = (config: AppConfig) => void;
+export type App<S = any> = (config: AppConfig<S>) => void;
 
 export const app: App;
