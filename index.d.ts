@@ -6,7 +6,7 @@ export type VirtualNodeType =
   | TEXT_NODE
   | SSR_NODE;
 
-export interface VirtualNode<T = any> {
+export interface VirtualNode<T = {}> {
   type: VirtualNodeType;
   props: T;
   children: Array<VirtualNode>;
@@ -15,26 +15,26 @@ export interface VirtualNode<T = any> {
   tag?: SSR_NODE | TEXT_NODE;
 }
 
-export interface TextNode extends VirtualNode<{}> {
+export interface TextNode extends VirtualNode {
   type: string | number;
   tag: TEXT_NODE;
 }
 
-export interface RecycledNode extends VirtualNode<{}> {
+export interface RecycledNode extends VirtualNode {
   tag: SSR_NODE;
 }
 
-export type View<T = any> = (
+export type View<T = {}> = (
   props?: T,
   children?: Array<VirtualNode>
 ) => VirtualNode<T>;
 
-export interface MemoizedNode<T = any> {
+export interface MemoizedNode<T = {}> {
   tag: View<T>;
   memo: T;
 }
 
-export type CreateVirtualNode<T = any> = (
+export type CreateVirtualNode<T = {}> = (
   name: string,
   options: T,
   children?: VirtualNode | Array<VirtualNode>
@@ -42,7 +42,7 @@ export type CreateVirtualNode<T = any> = (
 
 export type CreateTextNode = (value: string) => TextNode;
 
-export type CreateMemoizedNode<T = any> = (
+export type CreateMemoizedNode<T = {}> = (
   component: View<T>,
   props: T
 ) => MemoizedNode<T>;
@@ -79,7 +79,7 @@ export type Subscription<S = any, T = any> = [
   T | undefined
 ];
 
-interface AppConfig<S = {}> {
+interface AppConfig<S = any> {
   init: S | ActionEffect<S>;
   view: View<S>;
   node: Node;
