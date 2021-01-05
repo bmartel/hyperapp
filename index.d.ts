@@ -1,92 +1,98 @@
-const SSR_NODE: 1;
-const TEXT_NODE: 3;
+type SSR_NODE = 1;
+type TEXT_NODE = 3;
 
-export type VirtualNodeType =
-  | keyof HTMLElementTagNameMap
-  | TEXT_NODE
-  | SSR_NODE;
+type ClassProp = false | string | undefined | Record<string, boolean | undefined> | ClassProp[]
 
-export interface VirtualNode<T = {}> {
-  type: VirtualNodeType;
-  props: T;
-  children: Array<VirtualNode>;
-  node?: null | Node;
+type StyleProp
+  = { [K in keyof CSSStyleDeclaration]?: CSSStyleDeclaration[K] | null }
+  // For some reason we need this to prevent `style` from being a string.
+  & { [index: number]: never }
+
+type EventActions<S> = { [K in keyof EventsMap]?: Action<S, EventsMap[K]> }
+type EventsMap
+  = { [K in keyof HTMLElementEventMap as `on${K}`]: HTMLElementEventMap[K] }
+  & { [K in keyof WindowEventMap as `on${K}`]: WindowEventMap[K] }
+  & { onsearch: Event }
+
+  type PropList<T= {}, S = any> = Readonly<ElementCreationOptions & EventActions<S> & T & {
+    class?: ClassProp
+    key?: Key
+    style?: StyleProp
+  }>
+
+export type VirtualElementType = keyof HTMLElementTagNameMap;
+
+export interface VirtualElement<T = {}> {
+  type: VirtualElementType;
+  props: PropList<T>;
+  children: Array<VirtualElement>;
+  node?: Node | null;
   key?: string | null;
   tag?: SSR_NODE | TEXT_NODE;
 }
 
-export interface TextNode extends VirtualNode {
+export interface TextNode extends Omit<VirtualElement, "type"> {
   type: string | number;
   tag: TEXT_NODE;
 }
 
-export interface RecycledNode extends VirtualNode {
+export interface RecycledNode extends VirtualElement {
   tag: SSR_NODE;
 }
 
-export type View<T = {}> = (
-  props?: T,
-  children?: Array<VirtualNode>
-) => VirtualNode<T>;
+export type VirtualNode<T = {}> =
+  | VirtualElement<T>
+  | TextNode
+  | RecycledNode
+  | MemoizedNode<T>;
+
+export type Children = VirtualNode | Array<VirtualNode>;
+
+export type View<T = {}> = (props?: PropList<T>, children?: Children) => VirtualNode<T>;
 
 export interface MemoizedNode<T = {}> {
   tag: View<T>;
   memo: T;
 }
 
-export type CreateVirtualNode<T = {}> = (
+export function h<T = {}>(
   name: string,
   options: T,
-  children?: VirtualNode | Array<VirtualNode>
-) => VirtualNode<T>;
+  children?: Children
+): VirtualElement<T>;
+export function text(value: string): TextNode;
+export function memo<T = {}>(component: View<T>, props: PropList<T>): MemoizedNode<T>;
 
-export type CreateTextNode = (value: string) => TextNode;
-
-export type CreateMemoizedNode<T = {}> = (
-  component: View<T>,
-  props: T
-) => MemoizedNode<T>;
-
-export const h: CreateVirtualNode;
-export const text: CreateTextNode;
-export const memo: CreateMemoizedNode;
-
-export type EffectUpdate<S = any, T = any> = (
+export type Mutation<S = any, T = any, R = any> = (
   dispatch: Dispatch<S, T>,
   props?: T
-) => any;
-export type Effect<S = any, T = any> = [EffectUpdate<S, T>, T | undefined];
+) => R|void|Promise<R | void>;
 
-export type ActionEffect<S = any, T = any> = [S, Array<Effect<S, T>>];
-export type ActionUpdate<S = any, T = any> = S | ActionEffect<S, T>;
+export type Effect<S = any, T = any, R = any> = [Mutation<S, T, R>, T | undefined];
+
+export type StateWithEffects<S = any, T = any> = [S, Array<Effect<S, T>>];
+export type StateTransition<S = any, T = any> = S | StateWithEffects<S, T>;
 export type Action<S = any, T = any> = (
   state: S,
   props?: T
-) => ActionUpdate<S, T>;
+) => StateTransition<S, T>;
 
 export type Dispatch<S = any, T = any> = (action: Action<S, T>, props?: T) => S;
 
 export type Middleware<S = any, T = any> = (
-  next: Dispatch<S, T>
+  dispatch: Dispatch<S, T>
 ) => Dispatch<S, T>;
 
-export type SubscriptionUpdate<S = any, T = any> = (
-  dispatch: Dispatch<S, T>,
-  props?: T
-) => () => void;
-export type Subscription<S = any, T = any> = [
-  SubscriptionUpdate<S, T>,
-  T | undefined
-];
+type Unsubscribe = () => void
 
-interface AppConfig<S = any> {
-  init: S | ActionEffect<S>;
+export type Subscription<S = any, T = any> = Effect<S, T, Unsubscribe>;
+
+type App<S = any> = Readonly<{
+  init: StateTransition<S>;
   view: View<S>;
   node: Node;
   subscriptions?: Array<Subscription<S>>;
   middleware?: Array<Middleware<S>>;
-}
+}>;
 
-export type App<S = any> = (config: AppConfig<S>) => void;
-
-export const app: App;
+export function app<S = any>(config: App<S>): void;
