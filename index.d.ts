@@ -1,24 +1,35 @@
 type SSR_NODE = 1;
 type TEXT_NODE = 3;
 
-type ClassProp = false | string | undefined | Record<string, boolean | undefined> | ClassProp[]
+type ClassProp =
+  | false
+  | string
+  | undefined
+  | Record<string, boolean | undefined>
+  | ClassProp[];
 
-type StyleProp
-  = { [K in keyof CSSStyleDeclaration]?: CSSStyleDeclaration[K] | null }
-  // For some reason we need this to prevent `style` from being a string.
-  & { [index: number]: never }
+type StyleProp = {
+  [K in keyof CSSStyleDeclaration]?: CSSStyleDeclaration[K] | null;
+} & { [index: number]: never }; // For some reason we need this to prevent `style` from being a string.
 
-type EventActions<S> = { [K in keyof EventsMap]?: Action<S, EventsMap[K]> }
-type EventsMap
-  = { [K in keyof HTMLElementEventMap as `on${K}`]: HTMLElementEventMap[K] }
-  & { [K in keyof WindowEventMap as `on${K}`]: WindowEventMap[K] }
-  & { onsearch: Event }
+type EventAction<S = any, E = any> = [S, (e: E) => any];
+type EventActions<S> = {
+  [K in keyof EventsMap]?: EventAction<S, EventsMap[K]>;
+};
+type EventsMap = { [K in keyof HTMLElementEventMap]: HTMLElementEventMap[K] } &
+  { [K in keyof WindowEventMap]: WindowEventMap[K] } & { onsearch: Event };
 
-  type PropList<T= {}, S = any> = Readonly<ElementCreationOptions & EventActions<S> & T & {
-    class?: ClassProp
-    key?: Key
-    style?: StyleProp
-  }>
+type Key = string | null | undefined;
+
+type PropList<T = {}, S = any> = Readonly<
+  ElementCreationOptions &
+    EventActions<S> &
+    T & {
+      class?: ClassProp;
+      key?: Key;
+      style?: StyleProp;
+    }
+>;
 
 export type VirtualElementType = keyof HTMLElementTagNameMap;
 
@@ -27,7 +38,7 @@ export interface VirtualElement<T = {}> {
   props: PropList<T>;
   children: Array<VirtualElement>;
   node?: Node | null;
-  key?: string | null;
+  key?: Key;
   tag?: SSR_NODE | TEXT_NODE;
 }
 
@@ -48,7 +59,10 @@ export type VirtualNode<T = {}> =
 
 export type Children = VirtualNode | Array<VirtualNode>;
 
-export type View<T = {}> = (props?: PropList<T>, children?: Children) => VirtualNode<T>;
+export type View<T = {}> = (
+  props?: PropList<T>,
+  children?: Children
+) => VirtualNode<T>;
 
 export interface MemoizedNode<T = {}> {
   tag: View<T>;
@@ -61,14 +75,20 @@ export function h<T = {}>(
   children?: Children
 ): VirtualElement<T>;
 export function text(value: string): TextNode;
-export function memo<T = {}>(component: View<T>, props: PropList<T>): MemoizedNode<T>;
+export function memo<T = {}>(
+  component: View<T>,
+  props: PropList<T>
+): MemoizedNode<T>;
 
 export type Mutation<S = any, T = any, R = any> = (
   dispatch: Dispatch<S, T>,
   props?: T
-) => R|void|Promise<R | void>;
+) => R | void | Promise<R | void>;
 
-export type Effect<S = any, T = any, R = any> = [Mutation<S, T, R>, T | undefined];
+export type Effect<S = any, T = any, R = any> = [
+  Mutation<S, T, R>,
+  T | undefined
+];
 
 export type StateWithEffects<S = any, T = any> = [S, Array<Effect<S, T>>];
 export type StateTransition<S = any, T = any> = S | StateWithEffects<S, T>;
@@ -83,7 +103,7 @@ export type Middleware<S = any, T = any> = (
   dispatch: Dispatch<S, T>
 ) => Dispatch<S, T>;
 
-type Unsubscribe = () => void
+type Unsubscribe = () => void;
 
 export type Subscription<S = any, T = any> = Effect<S, T, Unsubscribe>;
 
